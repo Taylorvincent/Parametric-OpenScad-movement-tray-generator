@@ -122,7 +122,7 @@
     "Holed example 20mm to 25mm - 2D": {
       "adapted_base_length": "21",
       "adapted_base_width": "21",
-      "cols": "5",
+      "cols": "7",
       "create_Movement_Tray_Type": "0",
       "height": "5",
       "height_offset": "-1",
@@ -138,7 +138,7 @@
       "new_base_length": "25",
       "new_base_width": "25",
       "output_mode": "2D",
-      "rows": "1"
+      "rows": "6"
     }
   }
 }

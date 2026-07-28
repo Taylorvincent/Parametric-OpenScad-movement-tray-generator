@@ -60,6 +60,8 @@ When setting the value for ```adapted_base_width```and ```adapted_base_length```
 
 ```markBases``` Put a mark to show the new base widh/length on the adapter
 
+```output_mode``` ```3D``` (default) generates the printable model, ```2D``` generates a 2D outline of the bottom of the tray for laser cutting
+
 ## What you can do with the script
 
 [Here](parametric_tray_generator.json) you can find a paremetric saved profiles file for openscad: place it in the same folder where you use the script, then you should see a list of profiles:
@@ -132,6 +134,17 @@ With ```lower_Movement_tray_magnets``` you can set the number of magnets holes t
 <img src="lower_magnets_9.png" alt="lower_magnets_9" width="600" >
 
 
+
+### 2D outline for laser cutting
+
+Setting ```output_mode``` to ```2D``` projects the bottom of the tray to a 2D outline, so it can be exported as SVG/DXF and laser cut in MDF or acrylic.
+
+Use the holed example setup + 2D mode to get the base grid only. 
+
+
+```openscad -o tray.svg -D 'output_mode="2D"' parametric_tray_generator.scad```
+
+<img src="tray_2d.png" alt="tray_2d" width="600" >
 
 ### One mini adapter
 
