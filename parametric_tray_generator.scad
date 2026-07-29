@@ -389,6 +389,7 @@ module tray_model() {
                 tray_magnets_holes(cols,rows,new_base_width,new_base_length, lower_Movement_tray_magnets_height, lower_Movement_tray_magnets_radius ,toInt(lower_Movement_tray_magnets),true);
         }
 */
+        }
     }
 }
 
