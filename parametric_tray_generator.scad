@@ -352,7 +352,7 @@ module tray_model() {
                 }
                 
                 
-                if(lower_Movement_tray_magnets != "0"){
+                if(toInt(lower_Movement_tray_magnets) > 0){
                     tray_magnets_holes(cols,rows,new_base_width,new_base_length, lower_Movement_tray_magnets_height, lower_Movement_tray_magnets_radius ,toInt(lower_Movement_tray_magnets),false);
                 }
 
@@ -385,7 +385,7 @@ module tray_model() {
                 lance_formation_magnets_hole (cols, rows,  new_base_width, new_base_length, magnets_height, magnets_radius,height, height_offset);
             }
         /*
-         if(lower_Movement_tray_magnets != "0"){
+         if(toInt(lower_Movement_tray_magnets) > 0){
                 tray_magnets_holes(cols,rows,new_base_width,new_base_length, lower_Movement_tray_magnets_height, lower_Movement_tray_magnets_radius ,toInt(lower_Movement_tray_magnets),true);
         }
 */
@@ -495,6 +495,7 @@ function cavalryShift(isLanceFormation, cols, base_width) =
     : 0;
 
 function toInt(s, ret=0, i=0) =
-    i >= len(s)
+    is_num(s) ? s
+    : i >= len(s)
     ? ret
     : toInt(s, ret*10 + ord(s[i]) - ord("0"), i+1);
