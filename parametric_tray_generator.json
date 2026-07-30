@@ -1,11 +1,10 @@
 {
+    "fileFormatVersion": "1",
     "parameterSets": {
         "Lance 25x50mm to 30x60mm": {
             "adapted_base_length": "50",
             "adapted_base_width": "25",
             "cols": "6",
-            "create_empty_movement_tray": "false",
-            "empty_Movement_Tray_Type": "",
             "height": "5",
             "height_offset": "2",
             "inset": "1",
@@ -48,7 +47,6 @@
             "inset": "1",
             "isRound_adapted": "false",
             "is_lance_formation": "false",
-            "lower_Movement_tray_magnets": "",
             "lower_Movement_tray_magnets_height": "2",
             "lower_Movement_tray_magnets_radius": "3",
             "magnets_height": "0",
@@ -108,7 +106,6 @@
             "inset": "1",
             "isRound_adapted": "false",
             "is_lance_formation": "true",
-            "lower_Movement_tray_magnets": "",
             "lower_Movement_tray_magnets_height": "2",
             "lower_Movement_tray_magnets_radius": "3",
             "magnets_height": "0",
@@ -138,7 +135,49 @@
             "new_base_width": "25",
             "output_mode": "2D",
             "rows": "6"
+        },
+        "Vincent-converter": {
+            "adapted_base_length": "21",
+            "adapted_base_width": "21",
+            "cols": "5",
+            "create_Movement_Tray_Type": "0",
+            "height": "5.5",
+            "height_offset": "2",
+            "inset": "1",
+            "isRound_adapted": "false",
+            "is_lance_formation": "false",
+            "lower_Movement_tray_magnets": "0",
+            "lower_Movement_tray_magnets_height": "2",
+            "lower_Movement_tray_magnets_radius": "3",
+            "magnets_height": "2.1000000000000001",
+            "magnets_radius": "3",
+            "markBases": "false",
+            "new_base_length": "25",
+            "new_base_width": "25",
+            "output_mode": "3D",
+            "rows": "1"
+        },
+        "Vincent-tray": {
+            "adapted_base_length": "21",
+            "adapted_base_width": "21",
+            "cols": "5",
+            "create_Movement_Tray_Type": "3",
+            "height": "7.5",
+            "height_offset": "2",
+            "inset": "1",
+            "isRound_adapted": "false",
+            "is_lance_formation": "false",
+            "lower_Movement_tray_magnets": "9",
+            "lower_Movement_tray_magnets_height": "2",
+            "lower_Movement_tray_magnets_radius": "5",
+            "magnets_from_bottom": "false",
+            "magnets_height": "2",
+            "magnets_radius": "3",
+            "markBases": "false",
+            "new_base_length": "25",
+            "new_base_width": "25",
+            "output_mode": "3D",
+            "rows": "4"
         }
-    },
-    "fileFormatVersion": "1"
+    }
 }
