@@ -4,15 +4,37 @@ OUT  := prints
 # presets whose name starts with this (case-insensitive) are built by `make`
 MINE := vincent
 
-.PHONY: all everything list clean
+.PHONY: all everything list clean curated
 
-# build all "vincent*" presets to prints/<name>.stl
-all:
+# build all "vincent*" presets plus the curated list to prints/
+all: curated
 	@$(MAKE) --no-print-directory _build FILTER='$(MINE)'
 
-# build every preset in the json
-everything:
-	@$(MAKE) --no-print-directory _build FILTER=''
+# ---- curated builds: preset + -D overrides ----
+CURATED := \
+	$(OUT)/convertor-1x5-angled.stl \
+	$(OUT)/convertor-1x5-angled+marked.stl \
+	$(OUT)/convertor-1x5-square.stl \
+	$(OUT)/convertor-2x5-angled+marked.stl \
+	$(OUT)/tray-4x5.stl
+
+$(OUT)/convertor-1x5-angled.stl:        PRESET := Vincent-converter
+$(OUT)/convertor-1x5-angled+marked.stl: PRESET := Vincent-converter
+$(OUT)/convertor-1x5-angled+marked.stl: DEFS   := -D 'markBases=true'
+$(OUT)/convertor-1x5-square.stl:        PRESET := Vincent-converter
+$(OUT)/convertor-1x5-square.stl:        DEFS   := -D 'inset=0'
+$(OUT)/convertor-2x5-angled+marked.stl: PRESET := Vincent-converter
+$(OUT)/convertor-2x5-angled+marked.stl: DEFS   := -D 'rows=2' -D 'markBases=true'
+$(OUT)/tray-4x5.stl:                    PRESET := Vincent-tray
+
+curated: $(CURATED)
+
+# generic rule: rebuilds only when the scad or json changed
+$(OUT)/%.stl: $(SCAD) $(JSON)
+	@mkdir -p $(OUT)
+	@echo "==> $(PRESET) $(DEFS) -> $@"
+	@openscad -o $@ -p $(JSON) -P '$(PRESET)' $(DEFS) $(SCAD) 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
+
 
 # render one preset by exact name: make one P="Vincent - tray"
 one:
@@ -24,13 +46,6 @@ one:
 list:
 	@python3 -c 'import json; [print(k) for k in json.load(open("$(JSON)"))["parameterSets"]]'
 
-# only removes STLs this Makefile generated (named after presets), never other files in prints/
-clean:
-	@python3 -c 'import json; [print(k) for k in json.load(open("$(JSON)"))["parameterSets"]]' | \
-	while IFS= read -r p; do \
-		f="$(OUT)/$$(printf '%s' "$$p" | tr ' ' '_').stl"; \
-		[ -f "$$f" ] && echo "rm $$f" && rm "$$f"; \
-	done; true
 
 .PHONY: _build one
 _build:
