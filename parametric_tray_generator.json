@@ -155,7 +155,8 @@
       "new_base_length": "25",
       "new_base_width": "25",
       "output_mode": "3D",
-      "rows": "1"
+      "rows": "1",
+      "tray_wall_thickness": "2"
     },
     "Vincent-tray": {
       "adapted_base_length": "21",
@@ -176,7 +177,8 @@
       "new_base_length": "25",
       "new_base_width": "25",
       "output_mode": "3D",
-      "rows": "4"
+      "rows": "4",
+      "tray_wall_thickness": "2"
     }
   }
 }

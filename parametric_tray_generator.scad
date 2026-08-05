@@ -39,8 +39,10 @@ magnets_radius = 0.0;//.1
 is_lance_formation = false;
 //Put a mark to show the new base widh/length on the adapter
 markBases = false;
-//Creates a standard (not an adpater) movement tray for given Type for given new_base_length x new_base_width 
+//Creates a standard (not an adpater) movement tray for given Type for given new_base_length x new_base_width
 create_Movement_Tray_Type="0"; // [0:None, 4:Four walls, 3:Three walls]
+//Wall thickness at the top of the standalone movement tray
+tray_wall_thickness = 1.5;//.1
 //Creates holes under the tray for magnets
 lower_Movement_tray_magnets="0"; // [0:None, 4:Four, 5:Five, 6:Six, 7:Seven, 9:Nine]
 //Tray magnets height
@@ -322,8 +324,9 @@ module lance_formation_magnets_hole (cols, rows,  new_base_width, new_base_lengt
 module tray_model() {
 
     tray_type = toInt(create_Movement_Tray_Type);
-    //extra space added around the grid when a movement tray type is selected
-    tray_margin = tray_type == 0 ? 0 : 3;
+    //extra space added around the grid when a movement tray type is selected,
+    //widened by the inset so the sloped outer walls keep their thickness at the top
+    tray_margin = tray_type == 0 ? 0 : tray_wall_thickness*2 + inset*2;
 
     //Ranked movement tray
     if(!is_lance_formation){
@@ -332,7 +335,7 @@ module tray_model() {
                     if(tray_type == 0){
                         tray(cols, rows, height, new_base_width, new_base_length, adapted_base_width, adapted_base_length, inset, 0);
                     }else{
-                        tray(cols, rows, height, new_base_width, new_base_length, adapted_base_width, adapted_base_length, inset, 3);
+                        tray(cols, rows, height, new_base_width, new_base_length, adapted_base_width, adapted_base_length, inset, tray_margin);
                     }
                 }
                 color ([0.7, 0.7, 0.7]) {
@@ -347,7 +350,7 @@ module tray_model() {
                             adapted_base_holes_round(cols, rows, height_offset, new_base_width, new_base_length, adapted_base_width, adapted_base_length);
                         }
                     }else{//Add here the logic for the 4th back wall
-                        empty_tray_hole(cols, rows, height_offset, new_base_width,  new_base_length, adapted_base_width, adapted_base_length, inset, 3,create_Movement_Tray_Type);
+                        empty_tray_hole(cols, rows, height_offset, new_base_width,  new_base_length, adapted_base_width, adapted_base_length, inset, tray_margin,create_Movement_Tray_Type);
                     }
                 }
                 
@@ -376,14 +379,14 @@ module tray_model() {
                 }
             }else{
                 union() {
-                    lance_formation (cols, rows,  new_base_width, new_base_length, magnets_height, magnets_radius, height, height_offset, inset, 3);
+                    lance_formation (cols, rows,  new_base_width, new_base_length, magnets_height, magnets_radius, height, height_offset, inset, tray_margin);
                 }
             }
             
             if(tray_type == 0){
                 lance_formation_hole (cols, rows,  new_base_width, new_base_length, magnets_height, magnets_radius, height, height_offset);
             }else{
-                lance_formation_tray_hole(cols, rows,  new_base_width, new_base_length, magnets_height, magnets_radius, height, height_offset, inset, 3, create_Movement_Tray_Type);
+                lance_formation_tray_hole(cols, rows,  new_base_width, new_base_length, magnets_height, magnets_radius, height, height_offset, inset, tray_margin, create_Movement_Tray_Type);
             }
             
             if (magnets_height > 0){
