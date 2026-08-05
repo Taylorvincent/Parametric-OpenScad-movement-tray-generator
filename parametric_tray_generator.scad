@@ -35,8 +35,6 @@ isRound_adapted = false;
 magnets_height = 0.0;//.1
 //magnets radius
 magnets_radius = 0.0;//.1
-//insert the per-unit magnets from the bottom of the tray instead of from the top
-magnets_from_bottom = false;
 //if the tray is for lance formation, use only the number of rows to genrate the tray
 is_lance_formation = false;
 //Put a mark to show the new base widh/length on the adapter
@@ -152,7 +150,7 @@ module magnets_holes (cols, rows,  new_base_width, new_base_length, magnets_heig
             translate(
                         [new_base_width/2 + new_base_width * c , //row
                         new_base_length/2 + new_base_length * r, //col
-                        magnets_from_bottom ? -0.01 : height_offset-magnets_height+0.01]
+                        height_offset-magnets_height+0.01]
             )
             cylinder(r = magnets_radius/2, h = magnets_height+0.01,$fn=20);
            
@@ -308,7 +306,7 @@ module lance_formation_magnets_hole (cols, rows,  new_base_width, new_base_lengt
     
     for (thisRow = [0:rows-1]){    
 
-        translate( [0,(thisRow+1)*new_base_length-new_base_length/2,magnets_from_bottom ? -0.01 : height_offset-magnets_height+0.01]){
+        translate( [0,(thisRow+1)*new_base_length-new_base_length/2,height_offset-magnets_height+0.01]){
             for (thisCol = [0:thisRow]){                    
                 translate( [(new_base_width/2)*thisRow-(new_base_width*thisCol)+gap_w/2+new_base_width/2,0,0]){
                     color([0.7, 0.7,0.7 ]){
