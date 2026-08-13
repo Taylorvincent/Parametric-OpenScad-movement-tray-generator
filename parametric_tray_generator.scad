@@ -149,15 +149,18 @@ module adapted_base_holes_round(cols, rows, height_offset, new_base_width, new_b
 
 module magnets_holes (cols, rows,  new_base_width, new_base_length, magnets_height, magnets_radius, height, height_offset) {
     
+    //punch through the floor when the magnet is at least as tall as it, otherwise leave a skin below
+    hole_bottom = magnets_height >= height_offset ? -0.01 : height_offset-magnets_height;
+
     for (c = [0:cols-1]){
         for (r = [0:rows-1]){
             translate(
                         [new_base_width/2 + new_base_width * c , //row
                         new_base_length/2 + new_base_length * r, //col
-                        height_offset-magnets_height+0.01]
+                        hole_bottom]
             )
-            cylinder(r = magnets_radius/2, h = magnets_height+0.01,$fn=20);
-           
+            cylinder(r = magnets_radius/2, h = height_offset-hole_bottom+0.01,$fn=20);
+
         }
     }
 }
@@ -307,19 +310,22 @@ module lance_formation_magnets_hole (cols, rows,  new_base_width, new_base_lengt
     
     gap_w = new_base_width - adapted_base_width;
     gap_l = new_base_length - adapted_base_length;
-    
-    for (thisRow = [0:rows-1]){    
 
-        translate( [0,(thisRow+1)*new_base_length-new_base_length/2,height_offset-magnets_height+0.01]){
-            for (thisCol = [0:thisRow]){                    
+    //punch through the floor when the magnet is at least as tall as it, otherwise leave a skin below
+    hole_bottom = magnets_height >= height_offset ? -0.01 : height_offset-magnets_height;
+
+    for (thisRow = [0:rows-1]){
+
+        translate( [0,(thisRow+1)*new_base_length-new_base_length/2,hole_bottom]){
+            for (thisCol = [0:thisRow]){
                 translate( [(new_base_width/2)*thisRow-(new_base_width*thisCol)+gap_w/2+new_base_width/2,0,0]){
                     color([0.7, 0.7,0.7 ]){
-                        cylinder(r = magnets_radius/2, h = magnets_height+0.01,$fn=20);
-                    }    
+                        cylinder(r = magnets_radius/2, h = height_offset-hole_bottom+0.01,$fn=20);
+                    }
                 }
             }
         }
-    }     
+    }
 }
 
 
