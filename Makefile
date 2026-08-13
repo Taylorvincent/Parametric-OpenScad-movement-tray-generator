@@ -16,7 +16,8 @@ CURATED := \
 	$(OUT)/convertor-1x5-angled+marked.stl \
 	$(OUT)/convertor-1x5-square.stl \
 	$(OUT)/convertor-2x5-angled+marked.stl \
-	$(OUT)/tray-4x5.stl
+	$(OUT)/tray-4x5.stl \
+	$(OUT)/assembly-tray+converters.stl
 
 $(OUT)/convertor-1x5-angled.stl:        PRESET := Vincent-converter
 $(OUT)/convertor-1x5-angled+marked.stl: PRESET := Vincent-converter
@@ -28,6 +29,11 @@ $(OUT)/convertor-2x5-angled+marked.stl: DEFS   := -D 'rows=2' -D 'markBases=true
 $(OUT)/tray-4x5.stl:                    PRESET := Vincent-tray
 
 curated: $(CURATED)
+
+# assembly preview: tray with converter strips slotted in
+$(OUT)/assembly-tray+converters.stl: assembly_vincent.scad $(OUT)/tray-4x5.stl $(OUT)/convertor-1x5-angled.stl
+	@echo "==> assembly -> $@"
+	@openscad -o $@ assembly_vincent.scad 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
 
 # generic rule: rebuilds only when the scad or json changed
 $(OUT)/%.stl: $(SCAD) $(JSON)

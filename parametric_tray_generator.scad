@@ -43,6 +43,8 @@ markBases = false;
 create_Movement_Tray_Type="0"; // [0:None, 4:Four walls, 3:Three walls]
 //Wall thickness at the top of the standalone movement tray
 tray_wall_thickness = 1.5;//.1
+//Extra room inside the standalone tray walls so the bases slide in freely (total, split evenly on both sides)
+tray_tolerance = 1.0;//.1
 //Creates holes under the tray for magnets
 lower_Movement_tray_magnets="0"; // [0:None, 4:Four, 5:Five, 6:Six, 7:Seven, 9:Nine]
 //Tray magnets height
@@ -94,15 +96,15 @@ slice_eps = 0.01;
 //this module will create the hole in the "empty" classic movement tray
 module empty_tray_hole(cols, rows, height_offset, new_base_width,  new_base_length, adapted_base_width, adapted_base_length, inset, margin_for_empty_tray,create_Movement_Tray_Type) {
     
-    t_total_cols = (new_base_width * cols ) ;
-    t_total_rows = (new_base_length * rows);
+    t_total_cols = (new_base_width * cols) + tray_tolerance;
+    t_total_rows = (new_base_length * rows) + tray_tolerance;
 
- 
-    translate( 
-                [margin_for_empty_tray/2, //row
-               margin_for_empty_tray/2, //col
+
+    translate(
+                [(margin_for_empty_tray-tray_tolerance)/2, //row
+               (margin_for_empty_tray-tray_tolerance)/2, //col
                 height_offset]
-    )                       
+    )
 
     if(toInt(create_Movement_Tray_Type) == 3){
         cube([t_total_cols,t_total_rows+margin_for_empty_tray, 30]);
@@ -284,16 +286,16 @@ module lance_formation_tray_hole (cols, rows,  new_base_width, new_base_length, 
     
     for (thisRow = [0:rows-1]){    
 
-        translate( [0,thisRow*new_base_length+margin_for_empty_tray/2,height_offset]){
-            for (thisCol = [0:thisRow]){                    
-                translate( [(new_base_width/2)*thisRow-(new_base_width*thisCol)+margin_for_empty_tray/2,0,0]){
+        translate( [0,thisRow*new_base_length+(margin_for_empty_tray-tray_tolerance)/2,height_offset]){
+            for (thisCol = [0:thisRow]){
+                translate( [(new_base_width/2)*thisRow-(new_base_width*thisCol)+(margin_for_empty_tray-tray_tolerance)/2,0,0]){
                     color([0.7, 0.7,0.7 ]){
-                    
+
                         if(toInt(create_Movement_Tray_Type) == 3){
-                            cube([new_base_width, new_base_length+margin_for_empty_tray,height+2 ]);            
+                            cube([new_base_width+tray_tolerance, new_base_length+margin_for_empty_tray,height+2 ]);
                         }else{
-                            cube([new_base_width+0.05, new_base_length+0.05,height+2 ]);    
-                        } 
+                            cube([new_base_width+tray_tolerance+0.05, new_base_length+tray_tolerance+0.05,height+2 ]);
+                        }
                     }    
                 }
             }
@@ -326,7 +328,7 @@ module tray_model() {
     tray_type = toInt(create_Movement_Tray_Type);
     //extra space added around the grid when a movement tray type is selected,
     //widened by the inset so the sloped outer walls keep their thickness at the top
-    tray_margin = tray_type == 0 ? 0 : tray_wall_thickness*2 + inset*2;
+    tray_margin = tray_type == 0 ? 0 : tray_wall_thickness*2 + inset*2 + tray_tolerance;
 
     //Ranked movement tray
     if(!is_lance_formation){
