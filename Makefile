@@ -31,15 +31,18 @@ $(OUT)/tray-4x5.stl:                    PRESET := Vincent-tray
 curated: $(CURATED)
 
 # assembly preview: tray with converter strips slotted in
-$(OUT)/assembly-tray+converters.stl: assembly_vincent.scad $(OUT)/tray-4x5.stl $(OUT)/convertor-1x5-angled.stl
+$(OUT)/assembly-tray+converters.stl: assembly_vincent.scad $(OUT)/tray-4x5.stl $(OUT)/convertor-1x5-angled+marked.stl FORCE
 	@echo "==> assembly -> $@"
 	@openscad -o $@ assembly_vincent.scad 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
 
-# generic rule: rebuilds only when the scad or json changed
-$(OUT)/%.stl: $(SCAD) $(JSON)
+# generic rule: FORCE makes every stl rebuild unconditionally
+$(OUT)/%.stl: $(SCAD) $(JSON) FORCE
 	@mkdir -p $(OUT)
 	@echo "==> $(PRESET) $(DEFS) -> $@"
 	@openscad -o $@ -p $(JSON) -P '$(PRESET)' $(DEFS) $(SCAD) 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
+
+.PHONY: FORCE
+FORCE:
 
 
 # render one preset by exact name: make one P="Vincent - tray"
@@ -62,3 +65,30 @@ _build:
 		echo "==> $$p -> $$out"; \
 		openscad -o "$$out" -p $(JSON) -P "$$p" $(SCAD) 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; \
 	done; true
+
+# ---- billiard / snooker ghost-ball aiming tool -------------------------------
+# Independent of the tray generator: no preset JSON, ball diameter drives everything.
+# Explicit targets, not a pattern rule: prints/%.stl above would otherwise claim these.
+AIMSCAD := snooker_aim_tool.scad
+AIMOUT  := prints/testrpintjes2
+AIMSTLS := $(AIMOUT)/snooker-aim-tool.stl \
+           $(AIMOUT)/snooker-aim-tool-2in.stl \
+           $(AIMOUT)/snooker-aim-tool-178in.stl \
+           $(AIMOUT)/pool-aim-tool.stl
+
+# 52.5 = snooker, WPBSA regulation (full-size tables and snooker halls)
+# 50.8 = snooker 2" (7-10 ft tables), 47.6 = snooker 1-7/8" (6-7 ft tables)
+# 57.15 = US pool 2-1/4" -- what the original billiard.stl was built for
+$(AIMOUT)/snooker-aim-tool.stl:       BALL := 52.5
+$(AIMOUT)/snooker-aim-tool-2in.stl:   BALL := 50.8
+$(AIMOUT)/snooker-aim-tool-178in.stl: BALL := 47.6
+$(AIMOUT)/pool-aim-tool.stl:          BALL := 57.15
+
+.PHONY: aimtools aimtools-all
+aimtools: $(AIMOUT)/snooker-aim-tool.stl
+aimtools-all: $(AIMSTLS)
+
+$(AIMSTLS): $(AIMSCAD) FORCE
+	@mkdir -p $(AIMOUT)
+	@echo "==> aim tool ball_d=$(BALL) -> $@"
+	@openscad -o $@ --export-format binstl -D 'ball_d=$(BALL)' $(AIMSCAD) 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true

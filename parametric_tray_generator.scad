@@ -39,12 +39,18 @@ magnets_radius = 0.0;//.1
 is_lance_formation = false;
 //Put a mark to show the new base widh/length on the adapter
 markBases = false;
+//Depth of the base-marker grooves, measured from the top surface
+markBases_depth = 2.5;//.1
+//Width of the base-marker grooves at the top surface
+markBases_width = 1.0;//.1
 //Creates a standard (not an adpater) movement tray for given Type for given new_base_length x new_base_width
 create_Movement_Tray_Type="0"; // [0:None, 4:Four walls, 3:Three walls]
 //Wall thickness at the top of the standalone movement tray
 tray_wall_thickness = 1.5;//.1
 //Extra room inside the standalone tray walls so the bases slide in freely (total, split evenly on both sides)
 tray_tolerance = 1.0;//.1
+//Radius to round the hard top edges of the tray walls, outer rim and cavity edge (0 = sharp)
+tray_top_rounding = 0.0;//.1
 //Creates holes under the tray for magnets
 lower_Movement_tray_magnets="0"; // [0:None, 4:Four, 5:Five, 6:Six, 7:Seven, 9:Nine]
 //Tray magnets height
@@ -65,29 +71,40 @@ module tray(cols, rows, height, new_base_width, new_base_length, adapted_base_wi
         t_total_cols = (new_base_width * cols - inset *2) + margin_for_empty_tray;
         t_total_rows = (new_base_length * rows - inset *2) + margin_for_empty_tray;
         
-         polyhedron(
-            points=[
-                    [0,0,0],                        //base bottom left
-                    [b_total_cols,0,0],             //base bottom right
-                    [b_total_cols,b_total_rows,0],  //base top right
-                    [0,b_total_rows,0],             //base top left
-        
+        if (tray_top_rounding > 0) {
+            //same silhouette, but the top rim is traced by spheres tucked under
+            //the corners so every top edge gets a radius
+            r = min(tray_top_rounding, height/2);
+            hull() {
+                cube([b_total_cols, b_total_rows, slice_eps]);
+                for (x = [inset + r, inset + t_total_cols - r])
+                    for (y = [inset + r, inset + t_total_rows - r])
+                        translate([x, y, height - r]) sphere(r = r, $fn = 32);
+            }
+        } else {
+            polyhedron(
+                points=[
+                        [0,0,0],                        //base bottom left
+                        [b_total_cols,0,0],             //base bottom right
+                        [b_total_cols,b_total_rows,0],  //base top right
+                        [0,b_total_rows,0],             //base top left
 
-                    [inset,  inset,   height],                              //surface bottom left
-                    [inset + t_total_cols, inset,  height],                 //surface bottom right
-                    [inset + t_total_cols, inset + t_total_rows, height],   //surface top right
-                    [inset,   inset + t_total_rows,  height]                //surface top left
-                ],
-            faces =[
-                        [0,1,2,3],
-                        [4,5,1,0],
-                        [5,6,2,1],
-                        [6,7,3,2],
-                        [7,4,0,3],
-                        [7,6,5,4]
-                    ]
-        ); 
-   
+
+                        [inset,  inset,   height],                              //surface bottom left
+                        [inset + t_total_cols, inset,  height],                 //surface bottom right
+                        [inset + t_total_cols, inset + t_total_rows, height],   //surface top right
+                        [inset,   inset + t_total_rows,  height]                //surface top left
+                    ],
+                faces =[
+                            [0,1,2,3],
+                            [4,5,1,0],
+                            [5,6,2,1],
+                            [6,7,3,2],
+                            [7,4,0,3],
+                            [7,6,5,4]
+                        ]
+            );
+        }
 }
 
 /* [Hidden] */
@@ -111,7 +128,55 @@ module empty_tray_hole(cols, rows, height_offset, new_base_width,  new_base_leng
     }else{
         cube([t_total_cols,t_total_rows, 30]);
     }
+
+    //round the cavity's top edges into a convex shoulder so each wall top reads as a reverse U:
+    //each edge tool removes a bar minus a quarter-cylinder, leaving a quarter-round of wall
+    //material; at the closed corners the crown sweeps around as a quarter-torus instead
+    if (tray_top_rounding > 0) {
+        r = min(tray_top_rounding, height/2);
+        open_front = toInt(create_Movement_Tray_Type) == 3;
+        hx0 = (margin_for_empty_tray-tray_tolerance)/2;
+        hy0 = (margin_for_empty_tray-tray_tolerance)/2;
+        hx1 = hx0 + t_total_cols;
+        hy1 = hy0 + t_total_rows;
+        y_end = open_front ? hy0 + t_total_rows + margin_for_empty_tray : hy1;
+
+        translate([hx0, hy0, height])   top_edge_roundover(t_total_cols, r);                  //back wall
+        translate([hx0, y_end, height]) rotate([0,0,-90]) top_edge_roundover(y_end - hy0, r); //left wall
+        translate([hx1, hy0, height])   rotate([0,0,90])  top_edge_roundover(y_end - hy0, r); //right wall
+        translate([hx0, hy0, height])   top_corner_roundover(r);                              //back-left
+        translate([hx1, hy0, height])   rotate([0,0,90])  top_corner_roundover(r);            //back-right
+        if (!open_front) {
+            translate([hx1, hy1, height]) rotate([0,0,180]) top_edge_roundover(t_total_cols, r); //front wall
+            translate([hx1, hy1, height]) rotate([0,0,180]) top_corner_roundover(r);             //front-right
+            translate([hx0, hy1, height]) rotate([0,0,-90]) top_corner_roundover(r);             //front-left
+        }
+    }
 }
+
+//cutting block for a cavity top corner: cavity toward +x/+y, tray top at z=0.
+//removes the corner column down to a quarter-torus, so the wall crown sweeps around
+//the inside corner tangent to both edge roundovers and to the flat top
+module top_corner_roundover(r) {
+    difference() {
+        intersection() {
+            translate([-r, -r, -r]) cube([r + slice_eps, r + slice_eps, r + slice_eps*2]);
+            translate([0, 0, -r]) cylinder(h = r + slice_eps*3, r = r, $fn = 32);
+        }
+        rotate([0, 0, 180]) rotate_extrude(angle = 90, $fn = 32)
+            translate([r, -r]) circle(r = r, $fn = 32);
+    }
+}
+
+//cutting bar for one cavity top edge: edge along +x at the origin, cavity toward +y, tray top at z=0.
+//subtracting it leaves a convex quarter-round on the wall's inner shoulder
+module top_edge_roundover(len, r) {
+    difference() {
+        translate([-slice_eps, -r, -r]) cube([len + slice_eps*2, r + slice_eps, r + slice_eps]);
+        translate([-slice_eps*2, -r, -r]) rotate([0,90,0]) cylinder(h = len + slice_eps*4, r = r, $fn = 32);
+    }
+}
+
 
 module adapted_base_holes(cols, rows, height_offset, new_base_width,  new_base_length, adapted_base_width, adapted_base_length) {
     
@@ -169,30 +234,31 @@ module magnets_holes (cols, rows,  new_base_width, new_base_length, magnets_heig
 module mark_new_bases (cols, rows,  new_base_width, new_base_length, magnets_height, magnets_radius, height, height_offset) {
     color ([0.9, 0.4, 0.4])
                     {
+        //v-groove cross-section: markBases_width wide at the top surface, apex markBases_depth below it
         for (c = [1:cols-1]){
-            translate( 
-                [new_base_width * c-inset/2 , //col
+            translate(
+                [new_base_width * c - markBases_width/2 , //col
                  new_base_length * 0, //row
-                 height+height/5]
+                 height+0.01]
             )
 
-            rotate([-90,0,0]) {             
+            rotate([-90,0,0]) {
                 linear_extrude(new_base_length*rows) {
-                     polygon(points=[[0,0],[1,0],[inset/2,(height-height_offset)]], paths=[[0,1,2]]);
+                     polygon(points=[[0,0],[markBases_width,0],[markBases_width/2,markBases_depth+0.01]], paths=[[0,1,2]]);
                 }
-            }           
+            }
         }
-        
-        
+
+
         for (r = [1:rows-1]){
-            translate( 
+            translate(
                     [new_base_width * 0 , //col
-                     new_base_length * r-inset/2, //row
-                     height+height/5]
+                     new_base_length * r - markBases_width/2, //row
+                     height+0.01]
             )
-            rotate([90,90,90]) { 
+            rotate([0,90,0]) {
                 linear_extrude(new_base_width*cols) {
-                    polygon(points=[[0,1],[(height-height_offset),inset/2],[0,0]], paths=[[0,1,2]]);
+                    polygon(points=[[0,0],[0,markBases_width],[markBases_depth+0.01,markBases_width/2]], paths=[[0,1,2]]);
                 }
             }
         }

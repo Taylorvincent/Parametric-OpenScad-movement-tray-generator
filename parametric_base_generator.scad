@@ -27,6 +27,20 @@ magnets_height = 0.1;
 magnets_diameter = 0.1;
 
 base_type = "0"; // [0:Hollow, 1:Solid]
+//wall thickness of the pipe the magnet sits in (hollow bases only)
+magnets_pipe_wall = 1.5;
+//grainy texture on the top surface
+texture_top = true;
+//max grain size of the texture
+texture_grain = 0.8;//0.1
+//grains per square mm of top surface
+texture_density = 3;//0.1
+//random seed for the texture (same seed = same texture)
+texture_seed = 42;
+//X-shaped support ribs under the top (hollow bases only)
+support_ribs = true;
+//thickness of the support ribs
+rib_width = 1.2;//0.1
 //slotta hole width
 slotta_width = 2;//0.1
 //slotta hole length
@@ -106,32 +120,100 @@ module slotta (base_width, base_length,slotta_width,slotta_height, slotta_type, 
     }    
 }
 
-module magnets_holes (base_width, base_length, magnets_height, magnets_diameter) {   
-    translate( 
+module magnets_holes (base_width, base_length, magnets_height, magnets_diameter) {
+    translate(
         [base_width/2,
-        base_length/2, 
+        base_length/2,
         -0.1]
     )
     cylinder(d = magnets_diameter, h = magnets_height+0.01,$fn=30);
 }
 
-difference(){  
-    
-    color ([0.5, 0.5, 0.5]) {
-        tray(0,0, height, base_width, base_length, inset);
+//tube hanging from the underside of the top wall for the magnet to press-fit into
+module magnets_pipe (base_width, base_length, height, height_offset, magnets_diameter, pipe_wall) {
+    translate([base_width/2, base_length/2, 0])
+    cylinder(d = magnets_diameter + 2*pipe_wall, h = height - height_offset, $fn = 60);
+}
+
+//two thin walls running corner to corner (trimmed to the base outline elsewhere)
+module support_ribs_geom (base_width, base_length, height, height_offset, rib_width) {
+    rib_height = height - height_offset;
+    diag = sqrt(base_width*base_width + base_length*base_length);
+    angle = atan2(base_length, base_width);
+    translate([base_width/2, base_length/2, 0])
+    for (a = [angle, -angle])
+        rotate([0, 0, a])
+        translate([-diag/2, -rib_width/2, 0])
+        cube([diag, rib_width, rib_height]);
+}
+
+//random rotated cubes scattered across the top face;
+//protrude=true buries them so they poke up (bumps, to union),
+//protrude=false floats them so they bite down (dimples, to subtract)
+module top_texture (base_width, base_length, height, inset, grain, density, seed, protrude) {
+    n = max(1, floor((base_width - 2*inset) * (base_length - 2*inset) * density));
+    xs = rands(inset, base_width - inset, n, seed);
+    ys = rands(inset, base_length - inset, n, seed + 1);
+    ss = rands(grain*0.4, grain, n, seed + 2);
+    rx = rands(0, 360, n, seed + 3);
+    ry = rands(0, 360, n, seed + 4);
+    rz = rands(0, 360, n, seed + 5);
+    zs = rands(0.25, 0.5, n, seed + 6);
+    dir = protrude ? -1 : 1;
+    intersection() {
+        //clip to the flat top footprint so no grain overhangs the bevel edge
+        translate([inset, inset, height - 3*grain - 1])
+            cube([base_width - 2*inset, base_length - 2*inset, 6*grain + 2]);
+        for (i = [0:n-1])
+            translate([xs[i], ys[i], height + dir * zs[i] * ss[i]])
+            rotate([rx[i], ry[i], rz[i]])
+            cube(ss[i], center = true);
     }
-    
-    if(base_type == "0"){
-        color ([0.7, 0.7, 0.7]) {                   
-            tray(height_offset, -1.0, height - height_offset, base_width - (2*height_offset), base_length - (2 * height_offset), inset);
-        }   
+}
+
+difference(){
+
+    union(){
+
+        difference(){
+
+            color ([0.5, 0.5, 0.5]) {
+                tray(0,0, height, base_width, base_length, inset);
+            }
+
+            if(base_type == "0"){
+                color ([0.7, 0.7, 0.7]) {
+                    tray(height_offset, -1.0, height - height_offset, base_width - (2*height_offset), base_length - (2 * height_offset), inset);
+                }
+            }
+        }
+
+        if(base_type == "0" && magnets_height > 0.1){
+            magnets_pipe(base_width, base_length, height, height_offset, magnets_diameter, magnets_pipe_wall);
+        }
+
+        if(base_type == "0" && support_ribs){
+            intersection(){
+                support_ribs_geom(base_width, base_length, height, height_offset, rib_width);
+                tray(0,0, height, base_width, base_length, inset);
+            }
+        }
+
+        //render() collapses the grains to one mesh so F5 preview doesn't blow the CSG tree
+        if(texture_top){
+            render() top_texture(base_width, base_length, height, inset, texture_grain, texture_density, texture_seed, true);
+        }
     }
-    
-    if (magnets_height > 0.1){     
-        magnets_holes (base_width, base_length, magnets_height, magnets_diameter);            
+
+    if (magnets_height > 0.1){
+        magnets_holes (base_width, base_length, magnets_height, magnets_diameter);
     }
-    
+
     slotta(base_width,base_length,slotta_width,height,slotta_type,height_offset,inset);
+
+    if(texture_top){
+        render() top_texture(base_width, base_length, height, inset, texture_grain, texture_density, texture_seed + 100, false);
+    }
 
 }
 

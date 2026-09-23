@@ -22,5 +22,5 @@ import("prints/tray-4x5.stl");
 //resting on the tray floor, one strip per tray row
 for (r = [0:converter_rows_in_tray-1]){
     translate([tray_margin/2, tray_margin/2 + r*new_base_length, height_offset])
-        import("prints/convertor-1x5-angled.stl");
+        import("prints/convertor-1x5-square.stl");
 }
