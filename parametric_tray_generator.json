@@ -185,7 +185,7 @@
       "rows": "4",
       "tray_tolerance": "1",
       "tray_top_rounding": "0.5",
-      "tray_wall_thickness": "2"
+      "tray_wall_thickness": "1.25"
     }
   }
 }

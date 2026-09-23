@@ -6,16 +6,16 @@ MINE := vincent
 
 .PHONY: all everything list clean curated
 
-# build all "vincent*" presets plus the curated list to prints/
+# build all "vincent*" presets plus the curated list to prints/, then PNG previews
 all: curated
 	@$(MAKE) --no-print-directory _build FILTER='$(MINE)'
+	@$(MAKE) --no-print-directory _preview
 
 # ---- curated builds: preset + -D overrides ----
 CURATED := \
 	$(OUT)/convertor-1x5-angled.stl \
 	$(OUT)/convertor-1x5-angled+marked.stl \
 	$(OUT)/convertor-1x5-square.stl \
-	$(OUT)/convertor-2x5-angled+marked.stl \
 	$(OUT)/tray-4x5.stl \
 	$(OUT)/assembly-tray+converters.stl
 
@@ -24,16 +24,33 @@ $(OUT)/convertor-1x5-angled+marked.stl: PRESET := Vincent-converter
 $(OUT)/convertor-1x5-angled+marked.stl: DEFS   := -D 'markBases=true'
 $(OUT)/convertor-1x5-square.stl:        PRESET := Vincent-converter
 $(OUT)/convertor-1x5-square.stl:        DEFS   := -D 'inset=0'
-$(OUT)/convertor-2x5-angled+marked.stl: PRESET := Vincent-converter
-$(OUT)/convertor-2x5-angled+marked.stl: DEFS   := -D 'rows=2' -D 'markBases=true'
 $(OUT)/tray-4x5.stl:                    PRESET := Vincent-tray
 
 curated: $(CURATED)
 
 # assembly preview: tray with converter strips slotted in
-$(OUT)/assembly-tray+converters.stl: assembly_vincent.scad $(OUT)/tray-4x5.stl $(OUT)/convertor-1x5-angled+marked.stl FORCE
-	@echo "==> assembly -> $@"
-	@openscad -o $@ assembly_vincent.scad 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
+# placement params are read from the Vincent-tray preset, same as tray-4x5.stl
+$(OUT)/assembly-tray+converters.stl: assembly_vincent.scad $(JSON) $(OUT)/tray-4x5.stl $(OUT)/convertor-1x5-angled+marked.stl FORCE
+	@echo "==> assembly (Vincent-tray) -> $@"
+	@openscad -o $@ -p $(JSON) -P 'Vincent-tray' assembly_vincent.scad 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
+
+# PNG snapshots of the curated STLs, rendered straight from disk (no viewer cache)
+# fixed camera angle so successive builds compare 1:1; output in prints/preview/
+PREVIEW := $(OUT)/preview
+.PHONY: preview _preview
+preview: curated
+	@$(MAKE) --no-print-directory _preview
+
+# render only, no rebuild: `all` calls this after it has built the STLs
+_preview:
+	@mkdir -p $(PREVIEW)
+	@for stl in $(CURATED); do \
+		png="$(PREVIEW)/$$(basename "$$stl" .stl).png"; \
+		echo "==> preview $$stl -> $$png"; \
+		printf 'import("%s");\n' "$(CURDIR)/$$stl" > $(PREVIEW)/.view.scad; \
+		openscad -o "$$png" --render --imgsize=2400,1800 --viewall --autocenter \
+			--camera=0,0,0,55,0,25,0 --colorscheme=Tomorrow $(PREVIEW)/.view.scad 2>&1 | grep -iE 'warning|error'; \
+	done; rm -f $(PREVIEW)/.view.scad; true
 
 # generic rule: FORCE makes every stl rebuild unconditionally
 $(OUT)/%.stl: $(SCAD) $(JSON) FORCE
