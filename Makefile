@@ -1,50 +1,65 @@
 SCAD := parametric_tray_generator.scad
 JSON := parametric_tray_generator.json
 OUT  := prints
-# presets whose name starts with this (case-insensitive) are built by `make`
-MINE := vincent
 
-.PHONY: all everything list clean curated
+# tray size as ROWSxCOLS, override on the command line: make TRAY=4x6
+# the converter is always a single row strip matching the tray width (4x6 -> 1x6)
+TRAY ?= 4x5
 
-# build all "vincent*" presets plus the curated list to prints/, then PNG previews
-all: curated
-	@$(MAKE) --no-print-directory _build FILTER='$(MINE)'
-	@$(MAKE) --no-print-directory _preview
+# split "RxC" into its parts
+rows_of = $(word 1,$(subst x, ,$(1)))
+cols_of = $(word 2,$(subst x, ,$(1)))
 
-# ---- curated builds: preset + -D overrides ----
-CURATED := \
-	$(OUT)/convertor-1x5-angled.stl \
-	$(OUT)/convertor-1x5-angled+marked.stl \
-	$(OUT)/convertor-1x5-square.stl \
-	$(OUT)/tray-4x5.stl \
-	$(OUT)/assembly-tray+converters.stl
+CONV := 1x$(call cols_of,$(TRAY))
 
-$(OUT)/convertor-1x5-angled.stl:        PRESET := Vincent-converter
-$(OUT)/convertor-1x5-angled+marked.stl: PRESET := Vincent-converter
-$(OUT)/convertor-1x5-angled+marked.stl: DEFS   := -D 'markBases=true'
-$(OUT)/convertor-1x5-square.stl:        PRESET := Vincent-converter
-$(OUT)/convertor-1x5-square.stl:        DEFS   := -D 'inset=0'
-$(OUT)/tray-4x5.stl:                    PRESET := Vincent-tray
+TRAY_STL := $(OUT)/tray-$(TRAY).stl
+CONV_STL := $(OUT)/convertor-$(CONV)-angled+marked.stl
+ASSEMBLY := $(OUT)/assembly-tray-$(TRAY)+convertor-$(CONV).stl
+BUILDS   := $(TRAY_STL) $(CONV_STL) $(ASSEMBLY)
 
-curated: $(CURATED)
+.PHONY: all build list one preview _preview FORCE
+
+# build tray + converter + assembly to prints/, then PNG previews
+all: build
+	@$(MAKE) --no-print-directory _preview TRAY=$(TRAY)
+
+build: $(BUILDS)
+
+# tray: Vincent-tray preset with rows/cols from the name, e.g. prints/tray-4x6.stl
+$(OUT)/tray-%.stl: $(SCAD) $(JSON) FORCE
+	@mkdir -p $(OUT)
+	@echo "==> Vincent-tray $* -> $@"
+	@openscad -o $@ -p $(JSON) -P 'Vincent-tray' \
+		-D 'rows=$(call rows_of,$*)' -D 'cols=$(call cols_of,$*)' \
+		$(SCAD) 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
+
+# converter: Vincent-converter preset, angled + marked, always 1 row, e.g. prints/convertor-1x6-angled+marked.stl
+$(OUT)/convertor-1x%-angled+marked.stl: $(SCAD) $(JSON) FORCE
+	@mkdir -p $(OUT)
+	@echo "==> Vincent-converter 1x$* (marked) -> $@"
+	@openscad -o $@ -p $(JSON) -P 'Vincent-converter' \
+		-D 'rows=1' -D 'cols=$*' -D 'markBases=true' \
+		$(SCAD) 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
 
 # assembly preview: tray with converter strips slotted in
-# placement params are read from the Vincent-tray preset, same as tray-4x5.stl
-$(OUT)/assembly-tray+converters.stl: assembly_vincent.scad $(JSON) $(OUT)/tray-4x5.stl $(OUT)/convertor-1x5-angled+marked.stl FORCE
-	@echo "==> assembly (Vincent-tray) -> $@"
-	@openscad -o $@ -p $(JSON) -P 'Vincent-tray' assembly_vincent.scad 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
+# placement params are read from the Vincent-tray preset, sizes/files passed via -D
+$(ASSEMBLY): assembly_vincent.scad $(JSON) $(TRAY_STL) $(CONV_STL) FORCE
+	@echo "==> assembly $(TRAY) + $(CONV) -> $@"
+	@openscad -o $@ -p $(JSON) -P 'Vincent-tray' \
+		-D 'rows=$(call rows_of,$(TRAY))' \
+		-D 'tray_stl="$(TRAY_STL)"' -D 'conv_stl="$(CONV_STL)"' \
+		assembly_vincent.scad 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
 
-# PNG snapshots of the curated STLs, rendered straight from disk (no viewer cache)
+# PNG snapshots of the built STLs, rendered straight from disk (no viewer cache)
 # fixed camera angle so successive builds compare 1:1; output in prints/preview/
 PREVIEW := $(OUT)/preview
-.PHONY: preview _preview
-preview: curated
-	@$(MAKE) --no-print-directory _preview
+preview: build
+	@$(MAKE) --no-print-directory _preview TRAY=$(TRAY)
 
 # render only, no rebuild: `all` calls this after it has built the STLs
 _preview:
 	@mkdir -p $(PREVIEW)
-	@for stl in $(CURATED); do \
+	@for stl in $(BUILDS); do \
 		png="$(PREVIEW)/$$(basename "$$stl" .stl).png"; \
 		echo "==> preview $$stl -> $$png"; \
 		printf 'import("%s");\n' "$(CURDIR)/$$stl" > $(PREVIEW)/.view.scad; \
@@ -52,15 +67,7 @@ _preview:
 			--camera=0,0,0,55,0,25,0 --colorscheme=Tomorrow $(PREVIEW)/.view.scad 2>&1 | grep -iE 'warning|error'; \
 	done; rm -f $(PREVIEW)/.view.scad; true
 
-# generic rule: FORCE makes every stl rebuild unconditionally
-$(OUT)/%.stl: $(SCAD) $(JSON) FORCE
-	@mkdir -p $(OUT)
-	@echo "==> $(PRESET) $(DEFS) -> $@"
-	@openscad -o $@ -p $(JSON) -P '$(PRESET)' $(DEFS) $(SCAD) 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
-
-.PHONY: FORCE
 FORCE:
-
 
 # render one preset by exact name: make one P="Vincent - tray"
 one:
@@ -71,17 +78,6 @@ one:
 
 list:
 	@python3 -c 'import json; [print(k) for k in json.load(open("$(JSON)"))["parameterSets"]]'
-
-
-.PHONY: _build one
-_build:
-	@mkdir -p $(OUT)
-	@python3 -c 'import json; [print(k) for k in json.load(open("$(JSON)"))["parameterSets"] if k.lower().startswith("$(FILTER)".lower())]' | \
-	while IFS= read -r p; do \
-		out="$(OUT)/$$(printf '%s' "$$p" | tr ' ' '_').stl"; \
-		echo "==> $$p -> $$out"; \
-		openscad -o "$$out" -p $(JSON) -P "$$p" $(SCAD) 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; \
-	done; true
 
 # ---- billiard / snooker ghost-ball aiming tool -------------------------------
 # Independent of the tray generator: no preset JSON, ball diameter drives everything.
