@@ -15,8 +15,8 @@ new_base_length = 25;
 rows = 4;
 
 //passed by the Makefile via -D
-tray_stl = "prints/tray-4x5.stl";
-conv_stl = "prints/convertor-1x5-angled+marked.stl";
+tray_stl = "prints/4x5/tray-4x5.stl";
+conv_stl = "prints/4x5/convertor-1x5-angled+marked.stl";
 
 //outer margin added around the tray cavity by the generator
 tray_margin = tray_wall_thickness*2 + inset*2 + tray_tolerance;

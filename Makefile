@@ -12,33 +12,35 @@ cols_of = $(word 2,$(subst x, ,$(1)))
 
 CONV := 1x$(call cols_of,$(TRAY))
 
-TRAY_STL := $(OUT)/tray-$(TRAY).stl
-CONV_STL := $(OUT)/convertor-$(CONV)-angled+marked.stl
-ASSEMBLY := $(OUT)/assembly-tray-$(TRAY)+convertor-$(CONV).stl
+# everything for one tray size lands in prints/<TRAY>/, previews in prints/<TRAY>/preview/
+DIR      := $(OUT)/$(TRAY)
+TRAY_STL := $(DIR)/tray-$(TRAY).stl
+CONV_STL := $(DIR)/convertor-$(CONV)-angled+marked.stl
+ASSEMBLY := $(DIR)/assembly-tray-$(TRAY)+convertor-$(CONV).stl
 BUILDS   := $(TRAY_STL) $(CONV_STL) $(ASSEMBLY)
 
 .PHONY: all build list one preview _preview FORCE
 
-# build tray + converter + assembly to prints/, then PNG previews
+# build tray + converter + assembly to prints/<TRAY>/, then PNG previews
 all: build
 	@$(MAKE) --no-print-directory _preview TRAY=$(TRAY)
 
 build: $(BUILDS)
 
-# tray: Vincent-tray preset with rows/cols from the name, e.g. prints/tray-4x6.stl
-$(OUT)/tray-%.stl: $(SCAD) $(JSON) FORCE
-	@mkdir -p $(OUT)
-	@echo "==> Vincent-tray $* -> $@"
+# tray: Vincent-tray preset with rows/cols from TRAY
+$(TRAY_STL): $(SCAD) $(JSON) FORCE
+	@mkdir -p $(DIR)
+	@echo "==> Vincent-tray $(TRAY) -> $@"
 	@openscad -o $@ -p $(JSON) -P 'Vincent-tray' \
-		-D 'rows=$(call rows_of,$*)' -D 'cols=$(call cols_of,$*)' \
+		-D 'rows=$(call rows_of,$(TRAY))' -D 'cols=$(call cols_of,$(TRAY))' \
 		$(SCAD) 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
 
-# converter: Vincent-converter preset, angled + marked, always 1 row, e.g. prints/convertor-1x6-angled+marked.stl
-$(OUT)/convertor-1x%-angled+marked.stl: $(SCAD) $(JSON) FORCE
-	@mkdir -p $(OUT)
-	@echo "==> Vincent-converter 1x$* (marked) -> $@"
+# converter: Vincent-converter preset, angled + marked, always 1 row as wide as the tray
+$(CONV_STL): $(SCAD) $(JSON) FORCE
+	@mkdir -p $(DIR)
+	@echo "==> Vincent-converter $(CONV) (marked) -> $@"
 	@openscad -o $@ -p $(JSON) -P 'Vincent-converter' \
-		-D 'rows=1' -D 'cols=$*' -D 'markBases=true' \
+		-D 'rows=1' -D 'cols=$(call cols_of,$(TRAY))' -D 'markBases=true' \
 		$(SCAD) 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
 
 # assembly preview: tray with converter strips slotted in
@@ -51,8 +53,8 @@ $(ASSEMBLY): assembly_vincent.scad $(JSON) $(TRAY_STL) $(CONV_STL) FORCE
 		assembly_vincent.scad 2>&1 | grep -iE 'warning|error' | grep -v 'NoError'; true
 
 # PNG snapshots of the built STLs, rendered straight from disk (no viewer cache)
-# fixed camera angle so successive builds compare 1:1; output in prints/preview/
-PREVIEW := $(OUT)/preview
+# fixed camera angle so successive builds compare 1:1; output in prints/<TRAY>/preview/
+PREVIEW := $(DIR)/preview
 preview: build
 	@$(MAKE) --no-print-directory _preview TRAY=$(TRAY)
 
